@@ -18,7 +18,12 @@
 #endif
 
 #ifdef _WIN32
-#define _WIN32_WINNT 0x602     /* Windows 8 / Server 2012: needed for FILE_ID_INFO (ReFS object ids) */
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0602     /* Windows 8 / Server 2012: enables FILE_ID_INFO (ReFS object ids) below */
+#endif
+#if _WIN32_WINNT >= 0x0602
+#define LFS_HAVE_REFS_OBJECTID
+#endif
 #endif
 
 #ifndef LFS_DO_NOT_USE_LARGE_FILE
@@ -195,7 +200,11 @@ static int lfs_win32_objectid(const char *file, int nofollow,
 {
   DWORD flags = FILE_FLAG_BACKUP_SEMANTICS;
   HANDLE h;
+#ifdef LFS_HAVE_REFS_OBJECTID
   FILE_ID_INFO id_info;
+#endif
+  BY_HANDLE_FILE_INFORMATION info;
+  unsigned long long file_index;
 
   if (nofollow)
     flags |= FILE_FLAG_OPEN_REPARSE_POINT;
@@ -206,6 +215,7 @@ static int lfs_win32_objectid(const char *file, int nofollow,
   if (h == INVALID_HANDLE_VALUE)
     return 1;
 
+#ifdef LFS_HAVE_REFS_OBJECTID
   /* Try the 128-bit extended id first, unconditionally: it's a per-handle
      query rather than the volume-management call that doesn't support
      remote storage, so it can succeed over SMB too - and NTFS answers it
@@ -227,23 +237,22 @@ static int lfs_win32_objectid(const char *file, int nofollow,
       pos += snprintf(objid_buf + pos, objid_bufsize - pos,
                       "%02x", id_info.FileId.Identifier[i]);
     }
-  } else {
-    BY_HANDLE_FILE_INFORMATION info;
-    unsigned long long file_index;
-
-    if (!GetFileInformationByHandle(h, &info)) {
-      DWORD err = GetLastError();
-      CloseHandle(h);
-      SetLastError(err);
-      return 1;
-    }
-    CloseHandle(h);
-
-    snprintf(fsid_buf, fsid_bufsize, "%lx", (unsigned long) info.dwVolumeSerialNumber);
-
-    file_index = ((unsigned long long) info.nFileIndexHigh << 32) | info.nFileIndexLow;
-    snprintf(objid_buf, objid_bufsize, "%llx", file_index);
+    return 0;
   }
+#endif
+
+  if (!GetFileInformationByHandle(h, &info)) {
+    DWORD err = GetLastError();
+    CloseHandle(h);
+    SetLastError(err);
+    return 1;
+  }
+  CloseHandle(h);
+
+  snprintf(fsid_buf, fsid_bufsize, "%lx", (unsigned long) info.dwVolumeSerialNumber);
+
+  file_index = ((unsigned long long) info.nFileIndexHigh << 32) | info.nFileIndexLow;
+  snprintf(objid_buf, objid_bufsize, "%llx", file_index);
   return 0;
 }
 
