@@ -126,22 +126,13 @@ LuaFileSystem offers the following functions:
 
         <dt><strong><code>fsid</code></strong></dt>
         <dd>a hex string identifying the filesystem the object resides on. Two paths have the same
-        <code>fsid</code> if and only if they're on the same filesystem, on any platform. Only equality
-        is meaningful: the string's length and content otherwise carry no guarantees. On Windows this is
-        the volume serial number (<code>dev</code> there is only the drive number, which is not unique per
-        volume); on Unix systems it is the same underlying value as <code>dev</code>, just encoded losslessly
-        as a string instead of through a Lua number</dd>
+        <code>fsid</code> if and only if they're on the same filesystem, on any platform.</dd>
 
         <dt><strong><code>objid</code></strong></dt>
         <dd>a hex string identifying this object (file or directory) within its filesystem. Two paths have
         the same <code>objid</code> and <code>fsid</code> if and only if they point to the same object -
         usable to detect hard links, symlink cycles, or duplicate objects reached by different paths. Stable
-        for as long as the object exists; not guaranteed to survive a delete and recreate. On Windows this is
-        a real per-object file id (<code>ino</code> there is always <code>0</code>); on Unix systems it is the
-        same underlying value as <code>ino</code>. On FAT32/exFAT volumes, and on a network share whose server
-        or protocol doesn't support persistent file ids, <code>objid</code> is best-effort only: it is not
-        guaranteed to be stable or collision-free the way it is on NTFS, ReFS and Unix filesystems (the same
-        caveat already applies, usually silently, to <code>ino</code> over NFS or CIFS on Unix systems)</dd>
+        for as long as the object exists; not guaranteed to survive a delete and recreate.</dd>
 
         <dt><strong><code>mode</code></strong></dt>
         <dd>string representing the associated protection mode (the values could be
